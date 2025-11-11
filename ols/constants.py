@@ -98,7 +98,8 @@ MINIMUM_CONTEXT_TOKEN_LIMIT = 10
 # if chunk_size is small, we need to set a higher value, so that we will get
 # more context. If chunk_size is more, then we need to set a low value as we may
 # end up using too much context. Precise context will get us better response.
-RAG_CONTENT_LIMIT = 5
+# RAG_CONTENT_LIMIT = 5
+RAG_CONTENT_LIMIT = 10
 
 # Once the chunk is retrived we need to check similarity score, so that we won't
 # pick any random matching chunk.
