@@ -12,6 +12,7 @@ from langchain_core.messages.ai import AIMessageChunk
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from llama_index.core.retrievers import BaseRetriever
+from llama_index.core.schema import Node
 
 from ols import config, constants
 from ols.app.metrics import TokenMetricUpdater
@@ -133,6 +134,34 @@ class DocsSummarizer(QueryHelper):
             self.generic_llm_params,
         )
 
+    @staticmethod
+    def log_nodes(nodes: list[Node], name: str) -> None:
+        msg = "\n" + "*" * 80 + "\n" + name + " Nodes:"
+        if nodes:
+            for i, node in enumerate(nodes):
+                msg += f"\n\n\tNode {i+1}:\n"
+                msg += "\t" + "-" * 20 + "\n\t"
+                msg += node.node.get_content("all").replace("\n", "\n\t")
+        else:
+            msg += " No nodes found"
+        logger.debug(msg)
+
+    @staticmethod
+    def log_rag_chunks(chunks: list[RagChunk], name: str) -> None:
+        msg = "\n" + "*" * 80 + "\n" + name + " Chunks:"
+        if chunks:
+            msg += "\n"
+            for i, chunk in enumerate(chunks):
+                msg += f"\n\tChunk {i+1}:\n"
+                msg += "\t" + "-" * 20 + "\n\t"
+                msg += f"Title: {chunk.doc_title}\n\t"
+                msg += f"URL: {chunk.doc_url} \n\t"
+                msg += "Text:\n\t\t"
+                msg += chunk.text.replace("\n", "\n\t\t")
+        else:
+            msg += " No chunks found"
+        logger.debug(msg)
+
     def _prepare_prompt(
         self,
         query: str,
@@ -176,10 +205,13 @@ class DocsSummarizer(QueryHelper):
         # Retrieve RAG content
         if rag_retriever:
             retrieved_nodes = rag_retriever.retrieve(query)
+            self.log_nodes(retrieved_nodes, "Retrieved")
             retrieved_nodes = reranker.rerank(retrieved_nodes)
+            self.log_nodes(retrieved_nodes, "Reranked")
             rag_chunks, available_tokens = token_handler.truncate_rag_context(
                 retrieved_nodes, available_tokens
             )
+            self.log_rag_chunks(rag_chunks, "Truncated")
         else:
             logger.warning("Proceeding without RAG content. Check start up messages.")
             rag_chunks = []
